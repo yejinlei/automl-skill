@@ -1,13 +1,13 @@
 ---
 name: automl-skill
 description: >
-  AutoML 自动化机器学习技能 | Automated Machine Learning Skill. 
+  AutoML 自动化机器学习技能 | Automated Machine Learning Skill.
   基于 PyCaret 进行低代码机器学习建模，支持分类、回归、聚类、异常检测、时间序列预测、自然语言处理和关联规则挖掘等任务。
   未来将集成更多 AutoML 库（如 AutoGluon、FLAML 等）。
   当用户需要快速构建机器学习模型、自动化模型选择、超参数调优、模型集成、特征工程或进行 AutoML 实验时使用此技能。
   适用于数据科学家、公民数据科学家、机器学习工程师和希望快速原型开发的人员。
-  触发关键词：AutoML、机器学习自动化、PyCaret、分类模型、回归模型、聚类、异常检测、时间序列、文本分类、模型调优、模型比较、特征选择。
-  Trigger keywords in English: AutoML, automated machine learning, PyCaret, classification, regression, clustering, anomaly detection, time series forecasting, NLP, text mining, model tuning, model comparison, feature engineering.
+  触发关键词：AutoML、机器学习自动化、PyCaret、分类模型、回归模型、聚类、异常检测、时间序列、文本分类、模型调优、模型比较、特征选择、统计检验、显著性检验、A/B测试。
+  Trigger keywords in English: AutoML, automated machine learning, PyCaret, classification, regression, clustering, anomaly detection, time series forecasting, NLP, text mining, model tuning, model comparison, feature engineering, statistical test, significance testing, A/B testing.
 ---
 
 # PyCaret AutoML 技能指南 | PyCaret AutoML Skill Guide
@@ -24,6 +24,99 @@ This skill helps users build end-to-end machine learning workflows using PyCaret
 - **模型集成** - 支持 Bagging、Boosting、Stacking、Blending
 - **模型可解释性** - 支持 SHAP、Permutation Importance 等解释方法
 - **模型部署就绪** - 生成可复现的生产级 Pipeline
+- **统计推断增强** - 支持置信区间、假设检验、统计显著性分析
+
+---
+
+## 统计推断增强 | Statistical Enhancement (statsmodels)
+
+当需要统计推断、假设检验、置信区间时，可以使用 statsmodels 补充 PyCaret：
+
+### 线性回归模型
+```python
+import statsmodels.api as sm
+
+# OLS 回归（带统计显著性）
+X = sm.add_constant(X)  # 添加截距
+model = sm.OLS(y, X).fit()
+print(model.summary())  # R², F检验, P值, 置信区间
+```
+
+### 广义线性模型 (GLM)
+```python
+# 二项分布 GLM (Logistic 回归)
+glm_model = sm.GLM(y, X, family=sm.families.Binomial()).fit()
+
+# 泊松回归 (计数数据)
+poisson_model = sm.GLM(y, X, family=sm.families.Poisson()).fit()
+```
+
+### 假设检验
+```python
+from scipy import stats
+
+# t 检验
+t_stat, p_value = stats.ttest_ind(group1, group2)
+
+# 卡方检验
+chi2, p_value, dof, expected = stats.chi2_contingency(contingency_table)
+
+# ANOVA
+f_stat, p_value = stats.f_oneway(*groups)
+```
+
+### 时间序列分析
+```python
+from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+
+# ARIMA 模型
+arima_model = ARIMA(train_data, order=(1,1,1)).fit()
+forecast = arima_model.forecast(steps=12)
+
+# 季节性 SARIMAX
+sarimax_model = SARIMAX(data, order=(1,1,1), seasonal_order=(1,1,1,12)).fit()
+```
+
+### 统计诊断
+```python
+# 残差自相关检验 (Durbin-Watson)
+from statsmodels.stats.stattools import durbin_watson
+dw = durbin_watson(model.resid)
+
+# 异方差检验
+from statsmodels.stats.diagnostic import het_breuschpagan
+bp_test = het_breuschpagan(model.resid, model.model.exog)
+
+# 正态性检验
+from scipy import stats
+shapiro_stat, shapiro_p = stats.shapiro(model.resid)
+```
+
+### 混合效应模型 (随机效应)
+```python
+# 混合线性模型 (Panel Data / 多层次数据)
+from statsmodels.regression.mixed_linear_model import MixedLM
+mixed_model = MixedLM(y, X, groups=group_var).fit()
+```
+
+### PyCaret + statsmodels 组合使用
+```python
+# 1. 用 PyCaret 快速建模和选择模型
+from pycaret.classification import *
+clf = setup(data, target='target')
+best = compare_models()
+tuned = tune_model(best)
+
+# 2. 用 statsmodels 做统计推断
+import statsmodels.api as sm
+# 获取 PyCaret 模型的特征和预测
+X_with_const = sm.add_constant(X_test)
+sm_model = sm.Logit(y_test, X_with_const).fit(disp=0)
+print(sm_model.summary())  # 系数显著性 P值
+```
+
+---
 
 ## 支持的机器学习任务 | Supported ML Tasks
 
@@ -46,7 +139,7 @@ This skill helps users build end-to-end machine learning workflows using PyCaret
 根据您的机器学习任务，选择相应的模块：
 
 - **分类问题** → 使用 `pycaret.classification`
-- **回归问题** → 使用 `pycaret.regression`  
+- **回归问题** → 使用 `pycaret.regression`
 - **客户分群** → 使用 `pycaret.clustering`
 - **异常检测** → 使用 `pycaret.anomaly`
 - **时间预测** → 使用 `pycaret.time_series`
@@ -93,25 +186,25 @@ data.describe()
 clf = setup(
     data,
     target='target',
-    
+
     # ===== 缺失值处理 =====
     numeric_imputation='mean',       # 数值型: mean/median/mode/knn/iterative
     categorical_imputation='mode',   # 类别型: mode/constant
-    
+
     # ===== 异常值处理 =====
     remove_outliers=True,           # 移除异常值
     outliers_method='iforest',      # iforest/ee/lof
     outliers_threshold=0.05,        # 异常值比例
-    
+
     # ===== 类别不平衡处理 =====
     fix_imbalance=True,             # 处理类别不平衡
     fix_imbalance_method='SMOTE',  # SMOTE/ADASYN/RandomOverSampler
-    
+
     # ===== 数据类型指定 =====
     numeric_features=['age', 'income', 'score'],
     categorical_features=['city', 'gender', 'occupation'],
     date_features=['Date', 'created_at'],
-    
+
     session_id=42
 )
 ```
@@ -121,40 +214,40 @@ clf = setup(
 clf = setup(
     data,
     target='target',
-    
+
     # ===== 特征缩放 =====
     normalize=True,                 # 归一化
     normalize_method='zscore',     # zscore/minmax/maxabs/robust
-    
+
     # ===== 特征变换 =====
     transformation=True,            # 变换使数据更接近正态分布
     transformation_method='yeo-johnson',  # yeo-johnson/quantile
-    
+
     # ===== 特征选择 =====
     feature_selection=True,         # 特征选择
     feature_selection_method='classic',      # classic/univariate/sequential
     n_features_to_select=0.2,     # 选择20%最重要特征
-    
+
     # ===== 降维 =====
     pca=True,                      # PCA降维
     pca_method='linear',           # linear/kernel/incremental
     pca_components=0.95,           # 保留95%方差
-    
+
     # ===== 多重共线性处理 =====
     remove_multicollinearity=True,
     multicollinearity_threshold=0.9,
-    
+
     # ===== 特征编码 =====
     ordinal_features={'education': ['high_school', 'bachelor', 'master', 'phd']},
     high_cardinality_features='frequency',  # 处理高基数类别特征
-    
+
     # ===== 特征交互 =====
     polynomial_features=True,
     polynomial_degree=2,
-    
+
     # ===== 分箱（离散化） =====
     bin_numeric_features=['age', 'income'],
-    
+
     session_id=42
 )
 ```
@@ -323,7 +416,7 @@ print(f"目标分布:\n{train['target'].value_counts()}")
 clf = setup(
     train,
     target='target',
-    
+
     # 数据预处理
     numeric_imputation='median',
     categorical_imputation='mode',
@@ -331,7 +424,7 @@ clf = setup(
     outliers_method='iforest',
     fix_imbalance=True,
     fix_imbalance_method='SMOTE',
-    
+
     # 特征工程
     normalize=True,
     normalize_method='zscore',
@@ -340,12 +433,12 @@ clf = setup(
     remove_multicollinearity=True,
     polynomial_features=True,
     polynomial_degree=2,
-    
+
     # 划分配置
     train_size=0.8,
     fold_strategy='stratifiedkfold',
     fold=5,
-    
+
     session_id=42
 )
 
@@ -495,23 +588,3 @@ predictions = predict_model(model, fh=24)
 3. **超参数调优**: 根据时间预算设置 `n_iter`
 4. **模型集成**: 复杂任务使用 `ensemble_model` 或 `stack_models`
 5. **生产部署**: 使用 `finalize_model()` 在全量数据上训练
-
----
-
-## 故障排除 | Troubleshooting
-
-- **内存不足**: 减少 `n_iter`, 使用 `turbo=True`, 减少 `fold`
-- **特征维度太高**: 使用 `pca=True` 或 `feature_selection=True`
-- **类别不平衡**: 使用 `fix_imbalance=True`
-- **文本处理失败**: 确保文本列是字符串类型
-
----
-
-## PyCaret 版本信息 | Version Information
-
-当前文档基于 PyCaret 3.0 版本。
-
-- 官方文档: https://pycaret.gitbook.io/docs
-- API 文档: https://pycaret.readthedocs.io/
-
-如需了解特定模块的详细参数，请参考 references 目录下的相应文档。

@@ -150,6 +150,36 @@
       "prompt": "请帮我用 PyCaret 进行情感分析，判断文本评论是正面还是负面。",
       "expected_output": "使用 pycaret.nlp 或 pycaret.text 模块进行情感分析",
       "files": []
+    },
+    {
+      "id": 26,
+      "prompt": "我需要对 PyCaret 回归模型的结果进行统计显著性检验，查看哪些特征对目标变量有显著影响。",
+      "expected_output": "使用 statsmodels 的 OLS 回归获取 P值和置信区间，或在 PyCaret 中使用 interpret_model 查看特征重要性",
+      "files": []
+    },
+    {
+      "id": 27,
+      "prompt": "请帮我用 statsmodels 进行假设检验，判断两组数据的均值是否有显著差异。",
+      "expected_output": "使用 scipy.stats 的 ttest_ind 进行 t 检验，或使用 statsmodels 的 ANOVA",
+      "files": []
+    },
+    {
+      "id": 28,
+      "prompt": "请帮我用 statsmodels 进行时间序列分析，建立 ARIMA 模型预测未来趋势。",
+      "expected_output": "使用 statsmodels.tsa.arima.model.ARIMA 或 SARIMAX 进行时间序列建模和预测",
+      "files": []
+    },
+    {
+      "id": 29,
+      "prompt": "我需要对回归模型进行统计诊断，包括残差自相关检验和异方差检验。",
+      "expected_output": "使用 statsmodels.stats.stattools.durbin_watson 检验自相关，使用 statsmodels.stats.diagnostic.het_breuschpagan 检验异方差",
+      "files": []
+    },
+    {
+      "id": 30,
+      "prompt": "请帮我用 statsmodels 的广义线性模型 GLM 进行二分类建模，需要获取系数和置信区间。",
+      "expected_output": "使用 statsmodels.GLM 设置 family=sm.families.Binomial() 进行 logistic 回归",
+      "files": []
     }
   ]
 }
