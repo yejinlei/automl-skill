@@ -53,43 +53,49 @@ This skill helps users build end-to-end machine learning workflows using PyCaret
 - **文本分析** → 使用 `pycaret.nlp`
 - **购物篮分析** → 使用 `pycaret.arules`
 
-### 2. 标准工作流 | Standard Workflow
+### 2. 标准 AutoML 工作流 | Standard AutoML Workflow
 
-完整的机器学习工作流程如下：
+完整的 AutoML 工作流程包含以下步骤：
 
-#### Step 1: 数据加载 | Data Loading
+#### Step 1: 数据收集与加载 | Data Collection & Loading
 ```python
-# 加载数据
+# 数据加载
 import pandas as pd
-data = pd.read_csv('data.csv')
+train = pd.read_csv('train.csv')
+test = pd.read_csv('test.csv')
 
 # 或使用 PyCaret 内置数据集
 from pycaret.classification import get_data
 data = get_data('breast_cancer')
 ```
 
-#### Step 2: 数据探索 | Exploratory Data Analysis
+#### Step 2: 数据理解与探索 | Data Understanding & EDA
 ```python
-# 查看数据基本信息
-data.info()
-data.describe()
+# 基本信息
+print(f"数据形状: {data.shape}")
+print(f"数据类型:\n{data.dtypes}")
 
-# 查看目标变量分布
+# 缺失值分析
+missing = data.isnull().sum()
+missing_pct = (missing / len(data) * 100).round(2)
+print(f"缺失值比例:\n{pd.concat([missing, missing_pct], axis=1)}")
+
+# 目标变量分布
 data['target'].value_counts()
 
-# 检查缺失值
-data.isnull().sum()
+# 数值特征统计
+data.describe()
 ```
 
-#### Step 3: 数据预处理 | Data Preprocessing (在 setup 中完成)
+#### Step 3: 数据预处理 | Data Preprocessing (setup 中自动完成)
 ```python
-# 初始化环境，包含完整的数据预处理
+# 初始化环境 - 数据预处理配置
 clf = setup(
     data,
     target='target',
     
     # ===== 缺失值处理 =====
-    numeric_imputation='mean',       # 数值型: mean/median/mode/knn
+    numeric_imputation='mean',       # 数值型: mean/median/mode/knn/iterative
     categorical_imputation='mode',   # 类别型: mode/constant
     
     # ===== 异常值处理 =====
@@ -97,15 +103,20 @@ clf = setup(
     outliers_method='iforest',      # iforest/ee/lof
     outliers_threshold=0.05,        # 异常值比例
     
-    # ===== 类别平衡 =====
+    # ===== 类别不平衡处理 =====
     fix_imbalance=True,             # 处理类别不平衡
-    fix_imbalance_method='SMOTE',  # SMOTE/ADASYN
+    fix_imbalance_method='SMOTE',  # SMOTE/ADASYN/RandomOverSampler
+    
+    # ===== 数据类型指定 =====
+    numeric_features=['age', 'income', 'score'],
+    categorical_features=['city', 'gender', 'occupation'],
+    date_features=['Date', 'created_at'],
     
     session_id=42
 )
 ```
 
-#### Step 4: 特征工程 | Feature Engineering (在 setup 中完成)
+#### Step 4: 特征工程 | Feature Engineering (setup 中自动完成)
 ```python
 clf = setup(
     data,
@@ -121,74 +132,108 @@ clf = setup(
     
     # ===== 特征选择 =====
     feature_selection=True,         # 特征选择
-    feature_selection_method='classic',  # classic/univariate/sequential
-    n_features_to_select=0.2,    # 选择20%特征
+    feature_selection_method='classic',      # classic/univariate/sequential
+    n_features_to_select=0.2,     # 选择20%最重要特征
     
     # ===== 降维 =====
-    pca=True,                     # PCA降维
-    pca_method='linear',          # linear/kernel/incremental
-    pca_components=0.95,         # 保留95%方差
+    pca=True,                      # PCA降维
+    pca_method='linear',           # linear/kernel/incremental
+    pca_components=0.95,           # 保留95%方差
     
-    # ===== 多重共线性 =====
+    # ===== 多重共线性处理 =====
     remove_multicollinearity=True,
     multicollinearity_threshold=0.9,
     
     # ===== 特征编码 =====
-    categorical_features=['city', 'category'],  # 指定类别特征
-    ordinal_features={'education': ['high_school', 'bachelor', 'master']},  # 有序类别
+    ordinal_features={'education': ['high_school', 'bachelor', 'master', 'phd']},
+    high_cardinality_features='frequency',  # 处理高基数类别特征
     
-    # ===== 日期特征 =====
-    date_features=['Date'],        # 自动提取年/月/日/星期
+    # ===== 特征交互 =====
+    polynomial_features=True,
+    polynomial_degree=2,
+    
+    # ===== 分箱（离散化） =====
+    bin_numeric_features=['age', 'income'],
     
     session_id=42
 )
 ```
 
-#### Step 5: 模型比较 | Model Comparison
+#### Step 5: 模型选择 | Model Selection
 ```python
 # 比较所有模型
 best_model = compare_models()
 
-# 指定模型比较
-best_model = compare_models(include=['lr', 'rf', 'xgboost', 'catboost'])
+# 指定模型列表比较
+best_model = compare_models(include=['lr', 'rf', 'xgboost', 'catboost', 'lightgbm'])
 
-# 快速模式
+# 快速模式（排除耗时模型）
 best_model = compare_models(turbo=True)
+
+# 按特定指标排序
+best_model = compare_models(sort='F1')  # 对于不平衡数据
 ```
 
-#### Step 6: 模型创建与调优 | Model Creation & Tuning
+#### Step 6: 模型训练 | Model Training
 ```python
 # 创建模型
 model = create_model('rf')
 
-# 调优模型
+# 指定模型参数
+model = create_model('xgboost', n_estimators=100, max_depth=5)
+```
+
+#### Step 7: 超参数调优 | Hyperparameter Tuning
+```python
+# 自动调优
 tuned_model = tune_model(model)
 
-# 自定义调优网格
+# 自定义调优
 tuned_model = tune_model(
     model,
-    custom_grid={'n_estimators': [100, 200], 'max_depth': [3, 5, 7]},
-    optimize='Accuracy'  # 分类: Accuracy/AUC/Recall/Precision/F1
-    # 回归: RMSE/MSE/MAE/R2
+    custom_grid={
+        'n_estimators': [100, 200, 300],
+        'max_depth': [3, 5, 7, None],
+        'learning_rate': [0.01, 0.1, 0.3]
+    },
+    optimize='Accuracy',           # 分类: Accuracy/AUC/Recall/Precision/F1/MCC
+                                  # 回归: RMSE/MSE/MAE/R2/RMSLE/MAPE
+    choose_better=True,            # 返回更好的模型
+    n_iter=50                      # 迭代次数
 )
 ```
 
-#### Step 7: 模型评估 | Model Evaluation
+#### Step 8: 模型评估 | Model Evaluation
 ```python
-# 评估模型
+# 交互式评估
 evaluate_model(tuned_model)
 
-# 绘制评估图表
-plot_model(tuned_model, plot='auc')           # ROC曲线
-plot_model(tuned_model, plot='confusion_matrix')  # 混淆矩阵
-plot_model(tuned_model, plot='learning_curve') # 学习曲线
-plot_model(tuned_model, plot='feature')       # 特征重要性
+# 各种评估图表
+plot_model(tuned_model, plot='auc')                # ROC曲线
+plot_model(tuned_model, plot='confusion_matrix')   # 混淆矩阵
+plot_model(tuned_model, plot='classification_report')  # 分类报告
+plot_model(tuned_model, plot='learning_curve')    # 学习曲线
+plot_model(tuned_model, plot='feature')            # 特征重要性
+plot_model(tuned_model, plot='residuals')          # 残差图（回归）
+plot_model(tuned_model, plot='error')              # 预测误差
 
-# 模型可解释性
-interpret_model(tuned_model)  # SHAP分析
+# 交叉验证结果
+results = pull()  # 获取当前实验结果
 ```
 
-#### Step 8: 模型集成 | Model Ensemble
+#### Step 9: 模型解释 | Model Interpretation
+```python
+# SHAP 解释
+interpret_model(tuned_model)
+
+# Permutation Importance
+interpret_model(tuned_model, plot='correlation')
+
+# 局部解释
+interpret_model(tuned_model, plot='reason', observation=0)
+```
+
+#### Step 10: 模型集成 | Model Ensemble
 ```python
 # Bagging
 bagged = ensemble_model(tuned_model, method='Bagging')
@@ -196,61 +241,87 @@ bagged = ensemble_model(tuned_model, method='Bagging')
 # Boosting
 boosted = ensemble_model(tuned_model, method='Boosting')
 
-# 模型融合
-blended = blend_models(estimator_list=['lr', 'dt', 'rf'], method='soft')
+# 融合多个模型
+blended = blend_models(
+    estimator_list=['lr', 'dt', 'rf', 'xgboost'],
+    method='soft',                  # soft/hard
+    weights=[1, 2, 3, 2]           # 各模型权重
+)
 
-# 模型堆叠
-stacked = stack_models(estimator_list=['lr', 'dt', 'rf'], meta_model='rf')
+# 堆叠
+stacked = stack_models(
+    estimator_list=['lr', 'dt', 'rf'],
+    meta_model='xgboost',
+    restack=False                   # 是否允许基础模型使用原始特征
+)
 ```
 
-#### Step 9: 最终训练与预测 | Final Training & Prediction
+#### Step 11: 最终模型训练与预测 | Final Model Training & Prediction
 ```python
 # 在全部数据上训练最终模型
 final_model = finalize_model(tuned_model)
 
 # 预测
-predictions = predict_model(final_model, data=test_data)
+predictions = predict_model(final_model, data=test)
 
 # 预测概率（分类）
-predictions = predict_model(final_model, data=test_data, probability_threshold=0.7)
+predictions = predict_model(
+    final_model,
+    data=test,
+    probability_threshold=0.7       # 自定义阈值
+)
 ```
 
-#### Step 10: 模型保存与部署 | Model Save & Deployment
+#### Step 12: 模型保存与部署 | Model Save & Deployment
 ```python
-# 保存模型
+# 保存模型（包含完整Pipeline）
 save_model(final_model, 'my_model')
+
+# 保存实验配置
+save_experiment('my_experiment')
 
 # 加载模型
 loaded_model = load_model('my_model')
 
-# 部署到云端
-deploy_model(final_model, platform='aws', authentication={...})
+# 部署到云平台
+deploy_model(
+    final_model,
+    platform='aws',                 # aws/gcp/azure
+    authentication={
+        'bucket': 'my-bucket'
+    }
+)
 
 # 创建Web应用
-create_app(final_model)
+create_app(final_model, app_path='app.py')
 
-# 创建API
-create_api(final_model, api_name='predict')
+# 创建REST API
+create_api(final_model, api_name='predict', api_file='predict.py')
 
 # 创建Docker
-create_docker('my_model')
+create_docker('my_model', docker_path='Dockerfile')
 ```
 
 ---
 
-## 完整流程示例 | Complete Pipeline Example
+## AutoML 完整流程示例 | Complete AutoML Pipeline Example
 
 ```python
 from pycaret.classification import *
 import pandas as pd
 
-# 1. 加载数据
-data = pd.read_csv('train.csv')
+# ========== Step 1: 数据加载 ==========
+train = pd.read_csv('train.csv')
 test = pd.read_csv('test.csv')
 
-# 2. 初始化环境 - 包含所有数据预处理和特征工程
+# ========== Step 2: 数据探索 ==========
+print(f"训练集: {train.shape}, 测试集: {test.shape}")
+print(f"缺失值:\n{train.isnull().sum()}")
+print(f"目标分布:\n{train['target'].value_counts()}")
+
+# ========== Step 3-4: 数据预处理 + 特征工程 ==========
 clf = setup(
-    data,
+    train,
     target='target',
     
     # 数据预处理
@@ -259,14 +330,18 @@ clf = setup(
     remove_outliers=True,
     outliers_method='iforest',
     fix_imbalance=True,
+    fix_imbalance_method='SMOTE',
     
     # 特征工程
     normalize=True,
     normalize_method='zscore',
     feature_selection=True,
     n_features_to_select=0.3,
+    remove_multicollinearity=True,
+    polynomial_features=True,
+    polynomial_degree=2,
     
-    # 划分
+    # 划分配置
     train_size=0.8,
     fold_strategy='stratifiedkfold',
     fold=5,
@@ -274,23 +349,25 @@ clf = setup(
     session_id=42
 )
 
-# 3. 比较模型
-best = compare_models()
+# ========== Step 5: 模型选择 ==========
+best = compare_models(sort='AUC')
 
-# 4. 调优
-tuned = tune_model(best)
+# ========== Step 6-7: 训练与调优 ==========
+tuned = tune_model(best, optimize='AUC', n_iter=30)
 
-# 5. 集成（可选）
-ensemble = ensemble_model(tuned)
+# ========== Step 8-9: 评估与解释 ==========
+evaluate_model(tuned)
+interpret_model(tuned)
 
-# 6. 评估
-evaluate_model(ensemble)
+# ========== Step 10: 集成（可选） ==========
+# ensemble = ensemble_model(tuned)
 
-# 7. 预测
-predictions = predict_model(ensemble, data=test)
+# ========== Step 11: 最终预测 ==========
+final = finalize_model(tuned)
+predictions = predict_model(final, data=test)
 
-# 8. 保存
-save_model(ensemble, 'best_model')
+# ========== Step 12: 保存 ==========
+save_model(final, 'best_model')
 ```
 
 ---

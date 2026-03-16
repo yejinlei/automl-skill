@@ -33,24 +33,58 @@ AutoML Skill is a powerful automated machine learning skill based on **PyCaret**
 
 ### Quick Start
 
+完整的 AutoML 工作流程：
+
 ```python
-# Classification Example
 from pycaret.classification import *
+import pandas as pd
 
-# Load data
-data = get_data('breast_cancer')
+# Step 1: Load Data
+train = pd.read_csv('train.csv')
+test = pd.read_csv('test.csv')
 
-# Setup environment
-clf = setup(data, target='target')
+# Step 2: Data Exploration
+print(f"Train: {train.shape}, Test: {test.shape}")
 
-# Compare models
-best_model = compare_models()
+# Step 3-4: Preprocessing & Feature Engineering
+clf = setup(
+    train,
+    target='target',
+    # Missing values
+    numeric_imputation='median',
+    categorical_imputation='mode',
+    # Outliers
+    remove_outliers=True,
+    # Class balance
+    fix_imbalance=True,
+    # Feature scaling
+    normalize=True,
+    normalize_method='zscore',
+    # Feature selection
+    feature_selection=True,
+    n_features_to_select=0.3,
+    session_id=42
+)
 
-# Tune model
-tuned_model = tune_model(best_model)
+# Step 5: Model Selection
+best = compare_models(sort='AUC')
 
-# Predict
-predictions = predict_model(tuned_model, data=test_data)
+# Step 6-7: Training & Tuning
+tuned = tune_model(best, optimize='AUC', n_iter=30)
+
+# Step 8-9: Evaluation & Interpretation
+evaluate_model(tuned)
+interpret_model(tuned)
+
+# Step 10: Ensemble (optional)
+# ensemble = ensemble_model(tuned)
+
+# Step 11: Final Prediction
+final = finalize_model(tuned)
+predictions = predict_model(final, data=test)
+
+# Step 12: Save
+save_model(final, 'best_model')
 ```
 
 ### Documentation Structure
@@ -111,24 +145,58 @@ AutoML Skill 是一个基于 **PyCaret** 的强大自动化机器学习技能，
 
 ### 快速开始
 
+完整的 AutoML 工作流程：
+
 ```python
-# 分类示例
 from pycaret.classification import *
+import pandas as pd
 
-# 加载数据
-data = get_data('breast_cancer')
+# Step 1: 加载数据
+train = pd.read_csv('train.csv')
+test = pd.read_csv('test.csv')
 
-# 初始化环境
-clf = setup(data, target='target')
+# Step 2: 数据探索
+print(f"训练集: {train.shape}, 测试集: {test.shape}")
 
-# 比较模型
-best_model = compare_models()
+# Step 3-4: 数据预处理 + 特征工程
+clf = setup(
+    train,
+    target='target',
+    # 缺失值处理
+    numeric_imputation='median',
+    categorical_imputation='mode',
+    # 异常值处理
+    remove_outliers=True,
+    # 类别平衡
+    fix_imbalance=True,
+    # 特征缩放
+    normalize=True,
+    normalize_method='zscore',
+    # 特征选择
+    feature_selection=True,
+    n_features_to_select=0.3,
+    session_id=42
+)
 
-# 调优模型
-tuned_model = tune_model(best_model)
+# Step 5: 模型选择
+best = compare_models(sort='AUC')
 
-# 预测
-predictions = predict_model(tuned_model, data=test_data)
+# Step 6-7: 训练与调优
+tuned = tune_model(best, optimize='AUC', n_iter=30)
+
+# Step 8-9: 评估与解释
+evaluate_model(tuned)
+interpret_model(tuned)
+
+# Step 10: 集成（可选）
+# ensemble = ensemble_model(tuned)
+
+# Step 11: 最终预测
+final = finalize_model(tuned)
+predictions = predict_model(final, data=test)
+
+# Step 12: 保存
+save_model(final, 'best_model')
 ```
 
 ### 文档结构
