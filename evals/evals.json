@@ -3,14 +3,14 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "使用 PyCaret 构建一个分类模型，数据集是 breast_cancer，目标是预测 target 列。我需要完整的 AutoML 流程，包括数据预处理、模型比较、超参数调优和最终预测。",
-      "expected_output": "完整的 PyCaret 分类工作流代码，包含 setup、compare_models、tune_model、ensemble_model、predict_model 等函数调用",
+      "prompt": "使用 PyCaret 构建一个分类模型，数据集是 breast_cancer，目标是预测 target 列。我需要完整的 AutoML 流程，包括数据预处理（归一化、异常值处理、特征选择）、模型比较、超参数调优和最终预测。",
+      "expected_output": "完整的 PyCaret 分类工作流代码，包含 setup（含 normalize=True, remove_outliers=True, feature_selection=True 等参数）、compare_models、tune_model、ensemble_model、predict_model 等函数调用",
       "files": []
     },
     {
       "id": 2,
-      "prompt": "我有一个 CSV 文件 'house_price.csv'，目标列是 'Price'，请帮我用 PyCaret 搭建一个回归模型来预测房价。需要进行数据预处理和模型调优。",
-      "expected_output": "针对回归任务的 PyCaret 代码，包含回归模块的导入、setup 配置和回归模型相关函数",
+      "prompt": "我有一个 CSV 文件 'house_price.csv'，目标列是 'Price'，请帮我用 PyCaret 搭建一个回归模型来预测房价。需要进行数据预处理（归一化、异常值处理、特征工程）和模型调优。",
+      "expected_output": "针对回归任务的 PyCaret 代码，包含回归模块的导入、setup 配置（含 normalize=True, remove_outliers=True, transformation=True 等参数）和回归模型相关函数",
       "files": []
     },
     {

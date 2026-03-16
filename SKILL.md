@@ -55,38 +55,242 @@ This skill helps users build end-to-end machine learning workflows using PyCaret
 
 ### 2. 标准工作流 | Standard Workflow
 
-每个 PyCaret 模块遵循相似的工作流程：
+完整的机器学习工作流程如下：
 
+#### Step 1: 数据加载 | Data Loading
 ```python
-# 1. 导入模块
-from pycaret.classification import *
+# 加载数据
+import pandas as pd
+data = pd.read_csv('data.csv')
 
-# 2. 加载数据（可选：使用内置数据集）
+# 或使用 PyCaret 内置数据集
+from pycaret.classification import get_data
 data = get_data('breast_cancer')
+```
 
-# 3. 初始化环境 (setup) - 数据预处理
-clf = setup(data, target='target', session_id=42)
+#### Step 2: 数据探索 | Exploratory Data Analysis
+```python
+# 查看数据基本信息
+data.info()
+data.describe()
 
-# 4. 比较模型 (compare_models)
+# 查看目标变量分布
+data['target'].value_counts()
+
+# 检查缺失值
+data.isnull().sum()
+```
+
+#### Step 3: 数据预处理 | Data Preprocessing (在 setup 中完成)
+```python
+# 初始化环境，包含完整的数据预处理
+clf = setup(
+    data,
+    target='target',
+    
+    # ===== 缺失值处理 =====
+    numeric_imputation='mean',       # 数值型: mean/median/mode/knn
+    categorical_imputation='mode',   # 类别型: mode/constant
+    
+    # ===== 异常值处理 =====
+    remove_outliers=True,           # 移除异常值
+    outliers_method='iforest',      # iforest/ee/lof
+    outliers_threshold=0.05,        # 异常值比例
+    
+    # ===== 类别平衡 =====
+    fix_imbalance=True,             # 处理类别不平衡
+    fix_imbalance_method='SMOTE',  # SMOTE/ADASYN
+    
+    session_id=42
+)
+```
+
+#### Step 4: 特征工程 | Feature Engineering (在 setup 中完成)
+```python
+clf = setup(
+    data,
+    target='target',
+    
+    # ===== 特征缩放 =====
+    normalize=True,                 # 归一化
+    normalize_method='zscore',     # zscore/minmax/maxabs/robust
+    
+    # ===== 特征变换 =====
+    transformation=True,            # 变换使数据更接近正态分布
+    transformation_method='yeo-johnson',  # yeo-johnson/quantile
+    
+    # ===== 特征选择 =====
+    feature_selection=True,         # 特征选择
+    feature_selection_method='classic',  # classic/univariate/sequential
+    n_features_to_select=0.2,    # 选择20%特征
+    
+    # ===== 降维 =====
+    pca=True,                     # PCA降维
+    pca_method='linear',          # linear/kernel/incremental
+    pca_components=0.95,         # 保留95%方差
+    
+    # ===== 多重共线性 =====
+    remove_multicollinearity=True,
+    multicollinearity_threshold=0.9,
+    
+    # ===== 特征编码 =====
+    categorical_features=['city', 'category'],  # 指定类别特征
+    ordinal_features={'education': ['high_school', 'bachelor', 'master']},  # 有序类别
+    
+    # ===== 日期特征 =====
+    date_features=['Date'],        # 自动提取年/月/日/星期
+    
+    session_id=42
+)
+```
+
+#### Step 5: 模型比较 | Model Comparison
+```python
+# 比较所有模型
 best_model = compare_models()
 
-# 5. 创建模型 (create_model)
-model = create_model('lr')
+# 指定模型比较
+best_model = compare_models(include=['lr', 'rf', 'xgboost', 'catboost'])
 
-# 6. 调优模型 (tune_model)
+# 快速模式
+best_model = compare_models(turbo=True)
+```
+
+#### Step 6: 模型创建与调优 | Model Creation & Tuning
+```python
+# 创建模型
+model = create_model('rf')
+
+# 调优模型
 tuned_model = tune_model(model)
 
-# 7. 集成模型 (ensemble_model)
-ensemble = ensemble_model(tuned_model)
+# 自定义调优网格
+tuned_model = tune_model(
+    model,
+    custom_grid={'n_estimators': [100, 200], 'max_depth': [3, 5, 7]},
+    optimize='Accuracy'  # 分类: Accuracy/AUC/Recall/Precision/F1
+    # 回归: RMSE/MSE/MAE/R2
+)
+```
 
-# 8. 模型评估 (evaluate_model)
+#### Step 7: 模型评估 | Model Evaluation
+```python
+# 评估模型
+evaluate_model(tuned_model)
+
+# 绘制评估图表
+plot_model(tuned_model, plot='auc')           # ROC曲线
+plot_model(tuned_model, plot='confusion_matrix')  # 混淆矩阵
+plot_model(tuned_model, plot='learning_curve') # 学习曲线
+plot_model(tuned_model, plot='feature')       # 特征重要性
+
+# 模型可解释性
+interpret_model(tuned_model)  # SHAP分析
+```
+
+#### Step 8: 模型集成 | Model Ensemble
+```python
+# Bagging
+bagged = ensemble_model(tuned_model, method='Bagging')
+
+# Boosting
+boosted = ensemble_model(tuned_model, method='Boosting')
+
+# 模型融合
+blended = blend_models(estimator_list=['lr', 'dt', 'rf'], method='soft')
+
+# 模型堆叠
+stacked = stack_models(estimator_list=['lr', 'dt', 'rf'], meta_model='rf')
+```
+
+#### Step 9: 最终训练与预测 | Final Training & Prediction
+```python
+# 在全部数据上训练最终模型
+final_model = finalize_model(tuned_model)
+
+# 预测
+predictions = predict_model(final_model, data=test_data)
+
+# 预测概率（分类）
+predictions = predict_model(final_model, data=test_data, probability_threshold=0.7)
+```
+
+#### Step 10: 模型保存与部署 | Model Save & Deployment
+```python
+# 保存模型
+save_model(final_model, 'my_model')
+
+# 加载模型
+loaded_model = load_model('my_model')
+
+# 部署到云端
+deploy_model(final_model, platform='aws', authentication={...})
+
+# 创建Web应用
+create_app(final_model)
+
+# 创建API
+create_api(final_model, api_name='predict')
+
+# 创建Docker
+create_docker('my_model')
+```
+
+---
+
+## 完整流程示例 | Complete Pipeline Example
+
+```python
+from pycaret.classification import *
+import pandas as pd
+
+# 1. 加载数据
+data = pd.read_csv('train.csv')
+test = pd.read_csv('test.csv')
+
+# 2. 初始化环境 - 包含所有数据预处理和特征工程
+clf = setup(
+    data,
+    target='target',
+    
+    # 数据预处理
+    numeric_imputation='median',
+    categorical_imputation='mode',
+    remove_outliers=True,
+    outliers_method='iforest',
+    fix_imbalance=True,
+    
+    # 特征工程
+    normalize=True,
+    normalize_method='zscore',
+    feature_selection=True,
+    n_features_to_select=0.3,
+    
+    # 划分
+    train_size=0.8,
+    fold_strategy='stratifiedkfold',
+    fold=5,
+    
+    session_id=42
+)
+
+# 3. 比较模型
+best = compare_models()
+
+# 4. 调优
+tuned = tune_model(best)
+
+# 5. 集成（可选）
+ensemble = ensemble_model(tuned)
+
+# 6. 评估
 evaluate_model(ensemble)
 
-# 9. 预测 (predict_model)
-predictions = predict_model(ensemble, data=test_data)
+# 7. 预测
+predictions = predict_model(ensemble, data=test)
 
-# 10. 保存模型 (save_model)
-save_model(ensemble, 'best_model_pipeline')
+# 8. 保存
+save_model(ensemble, 'best_model')
 ```
 
 ---
